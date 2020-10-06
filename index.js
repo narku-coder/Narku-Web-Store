@@ -1,74 +1,91 @@
-const express = require('express');
-const app = express();
+let express = require('express');
+let app = express();
+app.use(express.json());
 
 let fs = require("fs");
-let text = fs.readFileSync("./randomItems.txt").toString('utf-8');
-let items = text.split("\n");
+let text = fs.readFileSync('randomItems.txt').toString('utf-8'); 
+let items = text.substr(1, text.length);
+items = items.replace(/\(/g, "");
+items = items.replace(/\0/g, "");
+
 
 let carts = [];
 let users = [];
 let store = [];
 
 let i = 0;
-while (i < 50)
+let j = 0;
+let k = 0;
+let word;
+let storeItem;
+while (i < items.length)
 {
-    let storeItem = {
-        ID: (i + 1),
-        name: items[i]
+    if(items.charAt(i) === ' ' || items.charAt(i) === '\n')
+    { 
+        word = items.substr((i-(j-1)), (j-1));
+        storeItem = {
+            "ID": k,
+            "name": word
+        };
+        store.push(storeItem);
+        j = 0;
+        k++;
     }
-
-    store.push(storeItem);
     i++;
+    j++;
 }
-let cartID = 0;
-let userID = 0;
-let cartItemID = 0;
+
+let cartID = 1;
+let userID = 1;
+let cartItemID = 1;
 
 let user1 = {
-    ID: userID++,
-    firstName:"SampleUser",
-    lastName: "random",
-    emailAddress: "sample@email.com"
+    "firstName":"SampleUser",
+    "lastName": "random",
+    "emailAddress": "sample@email.com",
+    "ID" : 0
 };
 
 let cart1 = {
-    ID: cartID++,
-    user: user1,
-    items: []
+    "ID": 0,
+    "user": user1,
+    "items": []
 };
 
 let cartItem1 =
 {
-    ID: cartItemID++,
-    name: "SampleCartItem",
-    quantity: 5
+    "ID": 0,
+    "name": "SampleCartItem",
+    "quantity": 5
 };
 
-carts.push(cart1);
-cart1.items.push(cartItem1);
 
 let num = 0;
+carts.push(cart1);
+users.push(user1);
+
+app.listen(8080);
 
 app.get('/user', (req, res) => {
     res.send(users);
 });
 
 app.get('/user/:userId', (req, res) => {
-    let user1;
-    user1 = users.find((user) => {
-        return user.ID == req.params.userId;
-    })
-
-    res.send(user1 ? user1 : 404);  
+    console.log(req.params);
+    const user = users.find(user => user['ID'] = parseInt(req.params.userId));
+    res.send(user ? user : 404);  
 });
 
 app.post('/user', (req, res) => {
-    let user = req.body;
-    user.ID = num;
-    num++;
+    let newUser = req.body;
+    newUser.ID = userID;
+    newUser.cart.ID = cartID;
+    userID++;
+    cartID++;
 
-    users.push(user);
-    res.send(user);
+    users.push(newUser);
+    res.send(newUser);
+
 });
 
 app.delete('/user/:userId', (req, res) => {
@@ -79,22 +96,23 @@ app.delete('/user/:userId', (req, res) => {
 });
 
 app.get('/user/:userId/cart', (req, res) => {
-    const carts = carts.filter((cart) => {
-        return carts.user.userID === req.params.userId
-    })
-    res.send(carts ? carts : 404)
+    const user = users.find(user => user['ID'] = parseInt(req.params.userId));
+    const cart1 = user.cart;
+    console.log("cart1 - " + cart1);
+    res.send(cart1 ? cart1 : 404);
 });
+
 
 app.delete('/user/:userId/cart', (req, res) => {
     const carts1 = carts.filter((cart) => {
         return cart.user.userID === req.params.userId
     })
     
-    let cartLen = carts.length;
+    let cartLen = carts1.length;
     let i;
     for (i = 0; i < cartLen; i++)
     {
-        carts[i].items.length = 0;
+        carts1[i].items.length = 0;
     }
     res.send(carts ? carts : 404)
 });
@@ -141,4 +159,18 @@ app.get('/StoreItem/:storeItemId', (req, res) => {
     res.send(item1 ? item1 : 404);
 });
 
-app.listen(8080);
+app.get('/StoreItem', (req, res) => {
+    let item1 = [];
+    let subject = req.query.name;
+    let i = 0;
+    while(i < store.length)
+    {
+        if(store[i].name.includes(subject))
+        {
+            item1.push(store[i]);
+        }
+        i++;
+    }
+
+    res.send(item1 ? item1 : 404);
+});
