@@ -128,12 +128,48 @@ router.delete('/cart/:cartId/cartItem/:cartItemId', async (req, res) => {
 let numItems;
 let viewItems = [];
 router.get('/StoreItem/:storeItemId', async (req, res) => {
-    let currItem = await StoreItem.findById(req.params.storeItemId);
-	req.session.numCalls++;
-	req.session.items = [];
-	viewItems.push(currItem);
-	req.session.items = viewItems;
-    res.send(currItem ? currItem : 404);
+	if(req.params.storeItemId == 'Recent')
+	{
+		numItems = req.query.num;
+		let lastIndex = req.session.numCalls;
+		if(numItems > req.session.lastItemViewed.length)
+		{
+			res.send(404 + "You did not view that many items.");
+		}
+		else
+		{
+			let num = 0;
+			while(num < numItems)
+			{
+				viewItems.push(req.session.lastItemViewed[(lastIndex - 1)]);
+				lastIndex--;
+				num++;
+			}
+
+			res.send(viewItems);
+		}
+	}
+	else
+	{
+		let currItem = await StoreItem.findById(req.params.storeItemId);
+		if(!req.session.lastItemViewed)
+		{
+			req.session.lastItemViewed = [currItem];
+			req.session.numCalls = 1;
+		}
+		else
+		{
+			req.session.lastItemViewed.push(currItem);
+			req.session.numCalls++;
+		}
+		console.log("req.session.lastItemViewed - " + req.session.lastItemViewed);
+		/*
+		req.session.items = [];
+		viewItems.push(currItem);
+		req.session.items = viewItems;*/
+		//res.json(req.session.lastItemViewed);
+		res.send(currItem ? currItem : 404);
+	}
 });
 
 
@@ -143,26 +179,11 @@ router.get('/StoreItem', async (req, res) => {
     res.send(items ? items : 404);
 });
 
-router.get('/StoreItem/Recent', async (req, res) => {
-	let numOfCalls = req.session.numCalls;
-	//let num = req.query.num;
-	console.log("num - " + num /*+ " and numOfCalls - " + numOfCalls*/);
-	res.send("num - " + num /*+ " and numOfCalls - " + numOfCalls*/);
-	/*
-	if (num > numOfCalls)
-	{
-		res.send(404 + "Too many items");
-	}
-	else
-	{
-		let i = 0;
-		items = [];
-		while(i < num)
-		{
-			console.log("req.session.items[i] - " + req.session.items[i]);
-			//items.push(req.session.items[i]);
-			i++;
-		}
-		res.send(items);
-	}*/
+router.get('/Session', async (req, res) => {
+	req.session.lastItemViewed = [{}];
+	req.session.numCalls = 0;
+	req.session.items = [{}];
+	
+    res.send("Session has been reset.");
 });
+
