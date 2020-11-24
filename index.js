@@ -121,8 +121,8 @@ router.delete('/user/:userId', async (req, res) => {
 
 router.get('/user/:userId/cart', async (req, res) => {
 	const user = await User.findById(req.params.userId).populate('cart');
-	const cart1 = user.cart.populate('items.storeItem');
-	console.log("cart1 - " + JSON.stringify(cart1));
+	const cart1 = await user.cart.populate('items');
+	//console.log("cart1 - " + JSON.stringify(cart1));
     res.send(cart1 ? cart1 : 404);
 });
 
@@ -143,16 +143,19 @@ router.post('/cart/:cartId/cartItem', async (req, res) => {
 
     if(item != [])
     {
-		console.log("item - " + JSON.stringify(item));
-		let currCart = await Cart.findById(req.params.cartId).populate('items.storeItem');
+		let currCart = await Cart.findById(req.params.cartId).populate('items');
+		//console.log("currCart - " + JSON.stringify(currCart));
 		const newItem = {
-			item,
 			quantity: req.body.quantity,
+			storeItem: item._id
 		}
-		console.log("newItem - " + JSON.stringify(newItem));
-		currCart.items.push(newItem);
+		const thing = await CartItem.create(newItem);
+		console.log("thing - " + JSON.stringify(thing));
+		thing.storeItem = item;
+		//console.log("thing - " + JSON.stringify(thing));
+		currCart.items.push(thing._id);
 		currCart = await currCart.save();
-		res.send(newItem);
+		res.send(currCart);
 	}
 	else
 	{
