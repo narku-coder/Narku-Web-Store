@@ -8,6 +8,7 @@ const express = require('express');
 const session = require('express-session');
 const MongoStore = require('connect-mongo')(session);
 const jwt = require('jsonwebtoken');
+var cors = require('cors')
 
 let database;
 let app = express();
@@ -15,11 +16,13 @@ app.use(express.json());
 const router = express.Router();
 
 const initDataBase = async () => {
-	database = await mongoose.connect(url);
+	database = await mongoose.connect(url, {useUnifiedTopology: true, useNewUrlParser: true });
 	if(database) {
 		app.use(session({
 			secret: 'ASecretThatICantTell',
-			store: new MongoStore({mongooseConnection: mongoose.connection})
+			store: new MongoStore({mongooseConnection: mongoose.connection}),
+			resave: true,
+			saveUninitialized: false
 		}));
 		app.use(router);
 		console.log("Successfully connected to database");
@@ -44,22 +47,15 @@ const authenticateJWT = (req, res, next) => {
             if (err) {
                 return res.sendStatus(403);
             }
-            req.user = user;
+			req.user = user;
+			next();
         });
     } else {
         res.sendStatus(401);
 	}
-	//next();
 };
 
-app.use(function(req, res, next) {
-	res.header("Access-Control-Allow-Origin", "*");
-	res.header(
-	  "Access-Control-Allow-Headers",
-	  "Origin, X-Requested-With, Content-Type, Accept"
-	);
-	next();
-  });
+app.use(cors());
 
 app.listen(8080);
 
@@ -99,14 +95,14 @@ router.post('/user', async (req, res) => {
 
 });
 
-router.post('/user/login',  authenticateJWT, async (req, res) => {
+router.post('/user/login', async (req, res) => {
 	const {userName, password} = req.body;
 	const user = await User.findOne({userName, password});;
 	if (user) {
         // Generate an access token
         const accessToken = jwt.sign({user}, accessTokenSecret);
 
-        res.send({accessToken});
+        res.send({accessToken, user});
     } else {
         res.send('Username or password incorrect');
     }
@@ -124,18 +120,20 @@ router.delete('/user/:userId', async (req, res) => {
 });
 
 router.get('/user/:userId/cart', async (req, res) => {
-	const user = await User.findById(req.params.userId);
-	const cart1 = user.cart;
+	const user = await User.findById(req.params.userId).populate('cart');
+	const cart1 = user.cart.populate('items.storeItem');
+	console.log("cart1 - " + JSON.stringify(cart1));
     res.send(cart1 ? cart1 : 404);
 });
 
 
 router.delete('/user/:userId/cart', async (req, res) => {
-    const user = await User.findById(req.params.userId);
-	const cart1 = user.cart;
+	const user = await User.findById(req.params.userId).populate('cart');
+	cart1 = user.cart;
 
 	if (cart1) {
-		await cart1.remove();
+		await cart1.updateOne({items: [], __v:0}).lean();
+		console.log("cart1 - " + JSON.stringify(cart1));
 	  }
     res.send(cart1 ? cart1 : 404)
 });
@@ -143,16 +141,23 @@ router.delete('/user/:userId/cart', async (req, res) => {
 router.post('/cart/:cartId/cartItem', async (req, res) => {
     let item = await StoreItem.find({name: req.body.name});
 
-    if(item)
+    if(item != [])
     {
-		let currCart = await Cart.findById(req.params.cartId);
-	    let newItem = await CartItem.create(req.body);
+		console.log("item - " + JSON.stringify(item));
+		let currCart = await Cart.findById(req.params.cartId).populate('items.storeItem');
+		const newItem = {
+			item,
+			quantity: req.body.quantity,
+		}
+		console.log("newItem - " + JSON.stringify(newItem));
 		currCart.items.push(newItem);
-		await currCart.save();
-		await newItem.save();
-
+		currCart = await currCart.save();
 		res.send(newItem);
-    }
+	}
+	else
+	{
+		res.send(404);
+	}
 });
 
 router.delete('/cart/:cartId/cartItem/:cartItemId', async (req, res) => {
