@@ -1,0 +1,14 @@
+.cartItems
+{
+	float: right;
+}
+.cartItemsLi
+{
+	color: purple;
+	margin-bottom: 10px;
+}
+
+.cartTitle
+{
+	color: purple;
+}

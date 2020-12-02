@@ -1,0 +1,19 @@
+body
+{
+	margin: 0;
+}
+.welcome
+{
+	background: radial-gradient(circle, rgba(20,148,15,1) 0%, rgba(229,242,13,1) 100%);
+	font: 20px Arial;
+	margin: auto;
+	padding: 20px;
+	text-align: center;
+	color: red;
+	height: 20%; 
+}
+.main
+{
+	border: 5px solid black;
+	height: 100%;
+}

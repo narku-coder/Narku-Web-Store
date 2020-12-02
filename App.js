@@ -1,14 +1,11 @@
 
 import './App.css';
-import Store from './store.js';
-import Login from './login.js';
+import Login from './login';
 
 function App() {
-	console.log("It got here. - app");
   return (
     <div className="App">
       <Login />
-	  <Store />
     </div>
   );
 }
